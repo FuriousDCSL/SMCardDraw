@@ -1,0 +1,9 @@
+dist
+node_modules
+/*.zip
+
+scraper/Extreme Banners/
+
+scraper/Songs/
+
+scraper/extreme_out\.json

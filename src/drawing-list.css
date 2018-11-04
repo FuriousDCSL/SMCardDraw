@@ -1,0 +1,20 @@
+.drawings {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+
+.scrollable {
+  flex: 1 0 0;
+}
+
+@media (min-width: 1025px) {
+  .scrollable {
+    overflow: auto;
+    min-height: 12em;
+  }
+}
+
+.sectionLabel {
+  text-indent: 10px;
+}

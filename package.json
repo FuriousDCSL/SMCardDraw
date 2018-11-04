@@ -1,0 +1,48 @@
+{
+  "private": true,
+  "name": "ddr-card-draw",
+  "version": "1.0.0",
+  "description": "A card draw app for running DDR tournaments",
+  "scripts": {
+    "start": "webpack-dev-server --env.dev=true",
+    "build": "npm run validate && webpack",
+    "deploy": "npm run build && surge ./dist https://ddrdraw.surge.sh",
+    "deploy:staging": "npm run build && surge ./dist https://ddrdraw-staging.surge.sh",
+    "validate": "node scripts/validate.js"
+  },
+  "author": "Noah Manneschmidt",
+  "contributors": [
+    "Jeff Lloyd",
+    "Chris Chike"
+  ],
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "autoprefixer": "^7.2.6",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-jsx-pragmatic": "^1.0.2",
+    "babel-plugin-syntax-dynamic-import": "^6.18.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-react-jsx": "^6.24.1",
+    "babel-preset-env": "^1.6.1",
+    "classnames": "^2.2.5",
+    "copy-webpack-plugin": "^4.6.0",
+    "css-loader": "^0.28.9",
+    "del-webpack-plugin": "^1.0.4",
+    "eslint": "^4.17.0",
+    "extract-text-webpack-plugin": "^3.0.2",
+    "file-loader": "^1.1.6",
+    "formdata-polyfill": "^3.0.9",
+    "html-webpack-plugin": "^3.2.0",
+    "jsdom": "^11.6.2",
+    "jsonschema": "^1.2.2",
+    "offline-plugin": "^5.0.5",
+    "postcss-loader": "^2.1.0",
+    "preact": "^8.2.7",
+    "style-loader": "^0.20.1",
+    "surge": "^0.20.1",
+    "webpack": "^3.11.0",
+    "webpack-dev-server": "^2.11.1",
+    "zip-webpack-plugin": "^2.0.0"
+  }
+}

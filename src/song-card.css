@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css?family=Russo+One');
+
+.chart {
+  flex: 1 0 0;
+  text-align: center;
+  border: 6px solid black;
+  border-radius: 5px;
+  padding: 5px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  min-height: 100px;
+  color: white;
+  text-shadow: 0px 0px 10px black, 1px 1px 1px black;
+  font-family: Evogria, 'Russo One', Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  margin: 5px;
+  word-wrap: break-word;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+@media (max-width: 500px) {
+  .chart {
+    min-width: 100px;
+  }
+}
+
+.cardCenter {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.name {
+  font-size: 120%;
+}
+.nameTranslation {
+  font-size: 75%;
+}
+
+.cardFooter {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  font-size: 80%;
+  padding-top: 10px;
+  align-items: flex-end;
+}
+
+.shockBadge {
+  background-color: white;
+  padding: 3px;
+  border-radius: 50%;
+  height: 1.5em;
+  min-width: 1em;
+}
+
+.beginner {
+  background-color: #6eccc4;
+  border-color: #6eccc4;
+}
+
+.basic {
+  background-color: #e0de5c;
+  border-color: #e0de5c;
+}
+
+.difficult {
+  background-color: #e8715f;
+  border-color: #e8715f;
+}
+
+.expert {
+  background-color: #72cc6e;
+  border-color: #72cc6e;
+}
+
+.challenge {
+  background-color: #cc71e8;
+  border-color: #cc71e8;
+}
+
+.vetoed {
+  opacity: 0.3;
+}
+
+.difficulty {
+  text-transform: uppercase;
+}
