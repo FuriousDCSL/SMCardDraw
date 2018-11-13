@@ -1,7 +1,8 @@
 # SMCardDraw
-fork of DDR Card Draw for  by Jeff Lloyd, ported to react by Noah Manneschmidt, intended for Stepmania
+fork of DDR Card Draw for  by Jeff Lloyd, ported to react by Noah Manneschmidt,
+Forked for Stepmania by Joseph Broderick
 
-Pre-built, standalone ZIP files are available for download on the releases page
+
 
 Developing
 npm install
