@@ -1,3 +1,4 @@
+from PIL import Image
 import datetime
 import sys
 import json
@@ -11,7 +12,7 @@ from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStyleFactory,\
     QButtonGroup, QGridLayout, QAction, QSizePolicy, QFileDialog, QDialog, \
     QGraphicsScene, QGraphicsView, QErrorMessage, QGraphicsScale, \
     QGraphicsItem, QListWidget, QCheckBox, QRadioButton, QFrame, \
-    QListWidgetItem, QMessageBox
+    QListWidgetItem, QMessageBox, QProgressBar
 from PyQt5.QtGui import QIcon, QPixmap, QPen, QBrush, QTransform, QColor, QPainter, QPalette
 from PyQt5.QtCore import QSize,Qt, QRect, QPointF, QTimer, pyqtSignal, pyqtSlot
 
@@ -249,13 +250,99 @@ def parseSMFile(songFileName):
 
 
 def parseSSCFile(songFileName):
-    errorLog('ERROR SSC FALLBACK: SSC file not yet supported: '+ songFileName)
+    #errorLog('SSC parsing: '+ songFileName)
+    with io.open (songFileName, encoding ='utf-8', errors='ignore') as smFile:
+        rawData = smFile.readlines()
+    stripComments = []
+    for line in rawData:
+        stripComments.append(line.split('//')[0])
+    smText = ''
+    for line in stripComments:
+        smText+=line
+    smParsed = smText.split('#NOTEDATA:')
+
+
+    notesSingleDict = {}
+    notesDoubleDict = {}
+    smDict ={}
+    for line in smParsed[0].strip().split(';'):
+        line = line.strip().split('#')
+        if len(line)>1:
+            line = line[1]
+            line = line.split(':')
+            smDict[line[0].lower()]=line[1]
+    for chart in smParsed[1:]:
+        lines = chart.strip().split(';')
+        chartDifficulty = ''
+        chartMeter = ''
+        chartType = ''
+        for line in lines:
+            line = line.strip().split('#')
+            if len(line)>1:
+                line = line[1]
+                line = line.split(':')
+                if line[0].lower()=='stepstype':
+                    chartType = line[1].lower()
+                elif line[0].lower() == 'difficulty':
+                    chartDifficulty = line[1].lower()
+                elif line[0].lower() == 'meter':
+                    chartMeter = line[1]
+        if chartType.split('-')[1].lower() == 'single':
+            notesSingleDict[chartDifficulty]=chartMeter
+        else:
+            notesDoubleDict[chartDifficulty]=chartMeter
+
+    smDict['single'] = notesSingleDict
+    smDict['double'] = notesDoubleDict
+    return smDict
 
     return {}
 
 def parseDWIFile(songFileName):
-    errorLog('ERROR DWI FALLBACK: DWI file not yet supported: '+ songFileName)
-    return {}
+    #errorLog('DWI parsing '+ songFileName)
+    with io.open (songFileName, encoding ='utf-8', errors='ignore') as dwiFile:
+        rawData = dwiFile.readlines()
+    stripComments = []
+    for line in rawData:
+        stripComments.append(line.split('//')[0])
+    dwiText = ''
+    for line in stripComments:
+        dwiText+=line
+    dwiParsed = dwiText.split(';')
+    dwiStr=[]
+    for cmd in dwiParsed:
+        dwiStr.append(cmd.strip())
+    parsedData = {}
+    singleDict = {}
+    doubleDict = {}
+    for cmd in dwiStr:
+        if len(cmd)>0:
+            cmd = cmd.split('#')[1]
+            cmd = cmd.split(':')
+            if cmd[0].lower() == 'bpm':
+                parsedData['displaybpm']= cmd[1]
+            elif cmd[0].lower() == 'single':
+                if cmd[1].lower()=='maniac':
+                    singleDict['hard'] = cmd[2]
+                if cmd[1].lower()=='another':
+                    singleDict['difficult'] = cmd[2]
+                if cmd[1].lower()=='basic':
+                    singleDict['easy']=cmd[2]
+                if cmd[1].lower()=='smaniac':
+                    singleDict['challenge']=cmd[2]
+            elif cmd[0].lower() == 'double':
+                if cmd[1].lower()=='maniac':
+                    doubleDict['hard'] = cmd[2]
+                if cmd[1].lower()=='another':
+                    doubleDict['difficult'] = cmd[2]
+                if cmd[1].lower()=='basic':
+                    doubleDict['easy']=cmd[2]
+            else:
+                parsedData[cmd[0].lower()]=cmd[1]
+    parsedData['single']=singleDict
+    parsedData['double']=doubleDict
+    parsedData['difficulty_scale']='ddr'
+    return parsedData
 
 def parseSongFile(song):
     smFilename = ''
@@ -276,7 +363,6 @@ def parseSongFile(song):
 
     if smFilename != '':
         parsedData = parseSMFile(smFilename)
-        parsedData['folder']= song
     elif sscFilename != '':
         parsedData = parseSSCFile(sscFilename)
     elif dwiFilename != '':
@@ -284,6 +370,9 @@ def parseSongFile(song):
     else:
         errorLog ('ERROR: no song file: '+ song)
         parsedData = {}
+        return parsedData
+    parsedData['folder']= song
+
     return parsedData
 
 def parseDisplayBPM(bpms):
@@ -336,6 +425,18 @@ def parsePack(packFolder):
         if os.path.isdir(os.path.join(packFolder,song)):
             parsedData = parseSongFile(os.path.join(packFolder,song))
             if parsedData != {}:
+                if 'banner' in parsedData.keys():
+                    (base, ext) = os.path.splitext(parsedData['banner'])
+                    if ext.lower() == '.png' or ext.lower == '.jpg':
+                        image = getImage(parsedData,['jacket', 'json', 'banner' ,'background'])
+                    else:
+                        image = getImage(parsedData,['jacket', 'banner','background'])
+
+                else:
+                    image = getImage(parsedData,['banner','jacket','background'])
+                parsedData['banner'] = image
+                parsedData['excluded'] = 'false'
+                parsedData['difficulty_scale'] = 'pack'
                 songs.append(parsedData)
     pack['songs']=songs
     return pack
@@ -461,11 +562,6 @@ class SongInfoPanel(QWidget):
         else:
             self.songBPM.setText(parseSongBPMS(self.songInfo['bpms']))
 
-        if 'banner' in self.songInfo.keys():
-            image = getImage(self.songInfo,['json','banner','jacket','background'])
-        else:
-            image = getImage(self.songInfo,['banner','jacket','background'])
-
         if 'excluded' in self.songInfo.keys() and self.songInfo['excluded'] =='true':
             self.excludeSong.setChecked(True)
         else:
@@ -479,38 +575,61 @@ class SongInfoPanel(QWidget):
             self.setDifficultyScale('pack')
             self.songInfo['difficulty_scale'] = 'pack'
             self.songUpdate()
-        self.songInfo['banner']= image
-        self.songUpdate()
-        self.songGraphicSelect.setText(image)
-        self.songGraphic.setPixmap(QPixmap(image).scaledToWidth(200))
+        self.songGraphicSelect.setText(self.songInfo['banner'])
+        self.songGraphic.setPixmap(QPixmap(self.songInfo['banner']).scaledToWidth(200))
         self.songGraphicSelect.setFolder(self.songInfo['folder'])
 
         if 'single' in self.songInfo.keys():
             if 'beginner' in self.songInfo['single'].keys():
                 self.songSingleBeginner.setText(self.songInfo['single']['beginner'])
+            else:
+                self.songSingleBeginner.setText('')
+
             if 'easy' in self.songInfo['single'].keys():
                 self.songSingleBasic.setText(self.songInfo['single']['easy'])
+            else:
+                self.songSingleBasic.setText('')
             if 'medium' in self.songInfo['single'].keys():
                 self.songSingleDifficult.setText(self.songInfo['single']['medium'])
+            else:
+                self.songSingleDifficult.setText('')
             if 'hard' in self.songInfo['single'].keys():
                 self.songSingleExpert.setText(self.songInfo['single']['hard'])
+            else:
+                self.songSingleExpert.setText('')
             if 'challenge' in self.songInfo['single'].keys():
                 self.songSingleChallenge.setText(self.songInfo['single']['challenge'])
+            else:
+                self.songSingleChallenge.setText('')
             if 'edit' in self.songInfo['single'].keys():
                 self.songSingleEdit.setText(self.songInfo['single']['edit'])
+            else:
+                self.songSingleEdit.setText('')
         if 'double' in self.songInfo.keys():
             if 'beginner' in self.songInfo['double'].keys():
                 self.songDoubleBeginner.setText(self.songInfo['double']['beginner'])
+            else:
+                self.songDoubleBeginner.setText('')
             if 'easy' in self.songInfo['double'].keys():
                 self.songDoubleBasic.setText(self.songInfo['double']['easy'])
+            else:
+                self.songDoubleBasic.setText('')
             if 'medium' in self.songInfo['double'].keys():
                 self.songDoubleDifficult.setText(self.songInfo['double']['medium'])
+            else:
+                self.songDoubleDifficult.setText('')
             if 'hard' in self.songInfo['double'].keys():
                 self.songDoubleExpert.setText(self.songInfo['double']['hard'])
+            else:
+                self.songDoubleExpert.setText('')
             if 'challenge' in self.songInfo['double'].keys():
                 self.songDoubleChallenge.setText(self.songInfo['double']['challenge'])
+            else:
+                self.songDoubleChallenge.setText('')
             if 'edit' in self.songInfo['double'].keys():
                 self.songDoubleEdit.setText(self.songInfo['double']['edit'])
+            else:
+                self.songDoubleEdit.setText('')
 
     def setDifficultyScale(self, scale):
         if scale == 'pack':
@@ -552,7 +671,7 @@ def getImage(songJson, imagePref):
         if pref == 'json':
             if os.path.isfile(os.path.join(song,songJson['banner'])):
                 return os.path.join(song, songJson['banner'])
-            errorLog("Banner missing trying fallback "+tail)
+#            errorLog("Banner missing trying fallback "+tail)
 
         if pref =='jacket':
             for image in images:
@@ -588,6 +707,7 @@ def getImage(songJson, imagePref):
     filesize = -1
     imagename = ''
     for image in images:
+
         size = os.path.getsize (os.path.join(song,image))
         if filesize == -1:
             filesize = size
@@ -595,8 +715,10 @@ def getImage(songJson, imagePref):
         elif size < filesize:
             filesize = size
             imagename = image
+    if filesize == -1:
+        return os.path.join(GRAPHICS_DIR,'BannerNotFound.png')
+
     return os.path.join(song,imagename)
-    #return os.path.join(GRAPHICS_DIR,'BannerNotFound.png')
 
 class ScraperMainPanel(QWidget):
     def __init__(self,songsJson):
@@ -629,13 +751,19 @@ class ScraperMainPanel(QWidget):
             if packName == pack['name']:
                     self.songInfoPanel.selectSong(pack, songName)
 
-    def buildJson(self,rootFolder):
+    def buildJson(self,parent,rootFolder):
         self.packs = []
-        for fileName in os.listdir(rootFolder):
+        fileNames = os.listdir(rootFolder)
+        parent.setPBMin(0)
+        parent.setPBMax(len(fileNames))
+        parent.showPB()
+        for fileName in fileNames:
+            parent.incPB()
             if os.path.isdir(os.path.join(rootFolder,fileName)):
                 self.packs.append(parsePack(os.path.join(rootFolder,fileName)))
         self.packSelect(self.packs[0]['name'])
         self.packsPanel.update(self.packs)
+        parent.hidePB()
 
     def loadJson(self):
         fileName = QFileDialog.getOpenFileName(self, 'Select JSON file', '', 'JSON Files (*.json)')
@@ -680,13 +808,45 @@ class ScraperMainPanel(QWidget):
         packs = []
         for pack in self.packs:
             if packInfo['name'] == pack['name']:
-                print(packInfo['name'])
-                print(packInfo['excluded'])
                 packs.append(packInfo)
             else:
                 packs.append(pack)
         self.packs = packs
         self.packsPanel.packUpdate(packs)
+
+    def exportImages(self, parent, fileName):
+        assetPacks = []
+        parent.setPBMin(0)
+        parent.setPBMax(len(self.packs))
+        parent.showPB()
+        for pack in self.packs:
+            parent.incPB()
+            if pack['excluded'] != 'true':
+                (root,tail) = os.path.split(pack['folder'])
+                if not os.path.exists(os.path.join(fileName,tail)):
+                    os.mkdir(os.path.join(fileName,tail))
+                pack['folder'] = tail
+                songs =[]
+                for song in pack['songs']:
+                    if 'excluded' in song.keys() and song['excluded'] != 'true' or 'excluded' not in song.keys():
+
+                        banner = Image.open(song['banner'])
+                        (base,bannerFile) = os.path.split(song['banner'])
+                        (bannerBase, bannerExt) = os.path.splitext(bannerFile)
+                        ratio = 150.0 / float(banner.size[0])
+                        banner = banner.resize((150, int(banner.size[1]*ratio)))
+                        if banner.mode in ('RGBA', 'LA'):
+                            background = Image.new('RGB', banner.size, 0xffffff )
+                            background.paste(banner, banner.split()[-1])
+                            banner = background
+                        banner.convert('RGB').save(os.path.join(fileName,tail,bannerBase)+'.jpg', quality=90)
+                        song['banner'] = os.path.join(tail,bannerBase+'.jpg')
+                        songs.append(song)
+                pack['songs'] = songs
+                assetPacks.append(pack)
+        with io.open(os.path.join(fileName,'StepMania.json'), encoding='utf-8', mode='w') as jsonOutFile:
+            json.dump(assetPacks,jsonOutFile, sort_keys=True, indent=2)
+        parent.hidePB()
 
 class ScraperMainWindow(QMainWindow):
 
@@ -701,6 +861,9 @@ class ScraperMainWindow(QMainWindow):
         QApplication.setStyle(QStyleFactory.create('Fusion'))
         self.setWindowIcon(QIcon(GRAPHICS_DIR+'sm.png'))
         self.mainPanel = ScraperMainPanel('info.json')
+        self.progressBar = QProgressBar()
+        self.progressBar.hide()
+        self.status.addWidget(self.progressBar)
 
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu('&File')
@@ -710,6 +873,8 @@ class ScraperMainWindow(QMainWindow):
         openAct = QAction('&Open', self)
         openAct.setShortcut('Ctrl+O')
         openAct.triggered.connect(self.openJson)
+        exportAct = QAction('Export', self)
+        exportAct.triggered.connect(self.exportImages)
         saveAct = QAction('&Save',self)
         saveAct.setShortcut('Ctrl+S')
         saveAct.triggered.connect(self.saveJson)
@@ -723,6 +888,8 @@ class ScraperMainWindow(QMainWindow):
         exitAct.triggered.connect(self.quitApp)
         fileMenu.addAction(newAct)
         fileMenu.addAction(openAct)
+        fileMenu.addSeparator()
+        fileMenu.addAction(exportAct)
         fileMenu.addSeparator()
         fileMenu.addAction(saveAct)
         fileMenu.addAction(saveAsAct)
@@ -744,9 +911,15 @@ class ScraperMainWindow(QMainWindow):
 
         self.show()
 
+    def exportImages(self, event):
+        fileName = QFileDialog.getExistingDirectory(self, 'Select Assests folder','.')
+        if fileName!='':
+            self.mainPanel.exportImages(self, fileName)
+
+
     def newJson(self, event):
         fileName = QFileDialog.getExistingDirectory(self,'Select Songs Root Folder','c:/games/Stepmania 5.1/Songs')
-        self.mainPanel.buildJson(fileName)
+        self.mainPanel.buildJson(self, fileName)
 
 
     def openJson(self, event):
@@ -764,6 +937,23 @@ class ScraperMainWindow(QMainWindow):
 
     def helpDialog(self):
         print('help')
+
+    def setPBMin(self, min):
+        self.progressBar.setMinimum(min)
+
+    def setPBMax(self, max):
+        self.progressBar.setMaximum(max)
+
+    def showPB(self):
+        self.PBValue = 0
+        self.progressBar.show()
+
+    def incPB(self):
+        self.PBValue += 1
+        self.progressBar.setValue(self.PBValue)
+
+    def hidePB(self):
+        self.progressBar.hide()
 
 def main():
     with io.open(ERROR_LOG, encoding = 'utf-8', mode = 'w') as errorLogFile:

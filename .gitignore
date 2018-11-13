@@ -15,3 +15,5 @@ scraper/sm\.json
 scraper/test\.json
 
 scraper/test_out\.json
+
+scraper/test/
