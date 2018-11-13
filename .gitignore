@@ -7,3 +7,11 @@ scraper/Extreme Banners/
 scraper/Songs/
 
 scraper/extreme_out\.json
+
+scraper/error_log\.txt
+
+scraper/sm\.json
+
+scraper/test\.json
+
+scraper/test_out\.json
