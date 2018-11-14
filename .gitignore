@@ -17,3 +17,13 @@ scraper/test\.json
 scraper/test_out\.json
 
 scraper/test/
+
+scraper/build/
+
+scraper/build-win-32/
+
+scraper/__pycache__/
+
+scraper/SM Scraper\.spec
+
+scraper/pd\.pdy

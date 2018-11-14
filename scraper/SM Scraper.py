@@ -5,6 +5,7 @@ import json
 import os.path
 import glob
 import io
+import random
 
 from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStyleFactory,\
     QTabWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit, QLabel, \
@@ -12,8 +13,10 @@ from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStyleFactory,\
     QButtonGroup, QGridLayout, QAction, QSizePolicy, QFileDialog, QDialog, \
     QGraphicsScene, QGraphicsView, QErrorMessage, QGraphicsScale, \
     QGraphicsItem, QListWidget, QCheckBox, QRadioButton, QFrame, \
-    QListWidgetItem, QMessageBox, QProgressBar
-from PyQt5.QtGui import QIcon, QPixmap, QPen, QBrush, QTransform, QColor, QPainter, QPalette
+    QListWidgetItem, QMessageBox, QProgressBar, QScrollArea, QGroupBox, \
+    QSpacerItem
+from PyQt5.QtGui import QIcon, QPixmap, QPen, QBrush, QTransform, QColor, \
+    QPainter, QPalette, QFont
 from PyQt5.QtCore import QSize,Qt, QRect, QPointF, QTimer, pyqtSignal, pyqtSlot
 
 GRAPHICS_DIR = 'graphics/'
@@ -325,7 +328,7 @@ def parseDWIFile(songFileName):
                 if cmd[1].lower()=='maniac':
                     singleDict['hard'] = cmd[2]
                 if cmd[1].lower()=='another':
-                    singleDict['difficult'] = cmd[2]
+                    singleDict['medium'] = cmd[2]
                 if cmd[1].lower()=='basic':
                     singleDict['easy']=cmd[2]
                 if cmd[1].lower()=='smaniac':
@@ -334,7 +337,7 @@ def parseDWIFile(songFileName):
                 if cmd[1].lower()=='maniac':
                     doubleDict['hard'] = cmd[2]
                 if cmd[1].lower()=='another':
-                    doubleDict['difficult'] = cmd[2]
+                    doubleDict['medium'] = cmd[2]
                 if cmd[1].lower()=='basic':
                     doubleDict['easy']=cmd[2]
             else:
@@ -421,6 +424,7 @@ def parsePack(packFolder):
     pack['name']=os.path.split(packFolder)[1]
     pack['folder']=packFolder
     pack['excluded']='false'
+    pack['difficulty_scale']='itg'
     for song in os.listdir(packFolder):
         if os.path.isdir(os.path.join(packFolder,song)):
             parsedData = parseSongFile(os.path.join(packFolder,song))
@@ -440,6 +444,280 @@ def parsePack(packFolder):
                 songs.append(parsedData)
     pack['songs']=songs
     return pack
+
+class CardGrid(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.rows =[]
+        self.layout=QGridLayout()
+        self.setLayout(self.layout)
+
+    def addRow(self,row):
+        for i in range(len(self.rows)):
+            self.layout.removeItem(self.rows[i])
+
+        self.rows.append(row)
+
+        i=0
+        for row in reversed(self.rows):
+#            self.layout.setRowMinimumHeight(i,200)
+            self.layout.addLayout(row,i,0)
+            i +=1
+
+class Card(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.mouseReleaseEvent = self.clicked
+        self.initUI()
+
+    def initUI(self):
+        self.layout =QGridLayout()
+        self.layout.addItem(QSpacerItem(10,10),0,0)
+        self.layout.addItem(QSpacerItem(10,10),5,5)
+        self.setLayout(self.layout)
+
+    def setColor(self, color):
+        self.color = QFrame()
+        self.color.setFrameShape(QFrame.Box)
+        self.layout.addWidget(self.color,0,0,-1,-1)
+        self.color.setStyleSheet('border: 5px groove ; border-radius: 20px; background-color: '+color)
+
+    def clicked(self,event):
+        print('clicked',self.title)
+
+    def setBackground(self, imageName):
+        label = QLabel()
+        label.setPixmap(QPixmap(imageName).scaledToWidth(150))
+        self.layout.addWidget(label,1,1,3,3,Qt.AlignCenter)
+
+    def setTitle(self,title):
+        self.title = title
+        label = QLabel(title)
+        label.setStyleSheet('color: white')
+        label.setWordWrap(True)
+        label.setFont(QFont('SanSerif',12,QFont.Bold))
+        self.layout.addWidget(label,0,1,3,1)
+
+    def setSubTitle(self, subTitle):
+        label = QLabel(subTitle)
+        label.setStyleSheet('color: white')
+        self.layout.addWidget(label,1,1,3,1)
+
+    def setTitleTranslit(self,titletranslit):
+        pass
+
+    def setArtist(self,artist):
+        label = QLabel(artist)
+        label.setStyleSheet('color: white')
+        self.layout.addWidget(label,2,1,3,1)
+
+    def setFolder(self,folder):
+        label = QLabel(folder)
+        label.setStyleSheet('color: white')
+        label.setWordWrap(True)
+        self.layout.addWidget(label,3,1,3,1)
+
+# card.setColor (color)
+# card.setBackground(song['banner'])
+# card.setTitle(song['title'])
+# if 'subtitle' in song.keys():
+#     card.setSubTitle(song['subtitle'])
+# if 'titletranslit' in song.keys():
+#     card.setTitleTranslit('titletranslit'])
+# if 'artist' in song.keys():
+#     card.setArtist(song['artist'])
+# card.setFolder(song['folder'])
+# row.addWidget(card)
+# self.drawnCards.addRow(row)
+
+
+class CardDrawPanel(QWidget):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.initUI()
+
+    def initUI(self):
+        self.topLayout=QVBoxLayout()
+        self.setLayout(self.topLayout)
+        self.inputLayout =QFormLayout()
+        self.inputhbox =QHBoxLayout()
+        self.input1 = QFormLayout()
+        self.input2 = QFormLayout()
+
+
+        self.numDraw = QSpinBox()
+        self.numDraw.setValue(5)
+        self.input1.addRow(QLabel('Number to draw: '),self.numDraw)
+        self.input1.addRow(QLabel(''))
+        self.ddrUse = QCheckBox()
+        self.ddrUse.setChecked(True)
+        self.input1.addRow(QLabel('Difficulty level DDR: '), self.ddrUse)
+        self.ddrMax = QSpinBox()
+        self.ddrMax.setValue(10)
+        self.input1.addRow(QLabel('Upper Bound (inclusive): '), self.ddrMax)
+        self.ddrMin = QSpinBox()
+        self.ddrMin.setValue(8)
+        self.input1.addRow(QLabel('Lower Bound (inclusive): '), self.ddrMin)
+        self.input1.addRow(QLabel(''))
+        self.ddrXUse = QCheckBox()
+        self.ddrXUse.setChecked(True)
+        self.input1.addRow(QLabel('Difficulty level DDR X Scale: '),self.ddrXUse)
+        self.ddrXMax = QSpinBox()
+        self.ddrXMax.setValue(14)
+        self.input1.addRow(QLabel('Upper Bound (inclusive): '), self.ddrXMax)
+        self.ddrXMin = QSpinBox()
+        self.ddrXMin.setValue(10)
+        self.input1.addRow(QLabel('Lower Bound (inclusive): '), self.ddrXMin)
+        self.input1.addRow(QLabel(''))
+        self.itgUse =QCheckBox()
+        self.itgUse.setChecked(True)
+        self.input1.addRow(QLabel('Difficulty level ITG: '), self.itgUse)
+        self.itgMax = QSpinBox()
+        self.itgMax.setValue(10)
+        self.input1.addRow(QLabel('Upper Bound (inclusive): '), self.itgMax)
+        self.itgMin = QSpinBox()
+        self.itgMin.setValue(8)
+        self.input1.addRow(QLabel('Lower Bound (inclusive): '), self.itgMin)
+
+        self.input1.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        self.inputhbox.addLayout(self.input1)
+
+        self.style = QComboBox()
+        self.style.addItem('Single')
+        self.style.addItem('Double')
+        self.input2.addRow(QLabel('Style: '), self.style)
+        self.input2.addRow(QLabel(''))
+        self.input2.addRow(QLabel('Difficulties: '))
+        self.input2.addRow(QLabel(''))
+        self.beginner = QCheckBox()
+        self.input2.addRow(QLabel('\tBeginner '), self.beginner)
+        self.basic = QCheckBox()
+        self.input2.addRow(QLabel('\tBasic '), self.basic)
+        self.difficult = QCheckBox()
+        self.input2.addRow(QLabel('\tDifficult '), self.difficult)
+        self.expert = QCheckBox()
+        self.expert.setChecked(True)
+        self.input2.addRow(QLabel('\tExpert '), self.expert)
+        self.challenge = QCheckBox()
+        self.challenge.setChecked(True)
+        self.input2.addRow(QLabel('\tChallenge '), self.challenge)
+        self.edit = QCheckBox()
+        self.input2.addRow(QLabel('\tEdit '), self.edit)
+
+        #self.input2.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        self.inputhbox.addLayout(self.input2)
+
+        self.inputLayout.addRow(self.inputhbox)
+
+        # self.wtTop = QFormLayout()
+        # self.useweighted = QCheckBox()
+        # self.wtTop.addRow(QLabel('Use Weighted '), self.useweighted)
+        # self.weights = QHBoxLayout()
+        # self.weights.addWidget(QLabel('WT1: '))
+        # self.weights.addWidget(QLabel('WT2: '))
+        # self.weights.addWidget(QLabel('WT3: '))
+        # self.weights.addWidget(QLabel('WT4: '))
+        # self.weights.addWidget(QLabel('WT5: '))
+        # self.wtTop.addRow(self.weights)
+        # self.inputLayout.addRow(self.wtTop)
+
+        self.drawButton = QPushButton('Draw')
+        self.drawButton.clicked.connect(self.drawCards)
+        self.inputLayout.addRow(self.drawButton)
+        self.drawnCards = CardGrid()
+        self.drawnCardsScroll =QScrollArea()
+#        self.drawnCardsWidget =QWidget()
+#        self.drawnCardsWidget.setLayout(self.drawnCards)
+        self.drawnCardsScroll.setWidget(self.drawnCards)
+        self.topLayout.addLayout(self.inputLayout)
+        self.drawnCardsScroll.setWidgetResizable(True)
+        self.topLayout.addWidget(self.drawnCardsScroll)
+        #self.topLayout.addWidget(self.drawnCards)
+
+    def drawCardsNaive(self):
+
+#        self.drawnCards.setStyleSheet('QLabel{background-color: white}')
+
+        packs = self.parent.getPacks()
+        matchingSongs = []
+        difficulties =[]
+        if self.beginner.isChecked():
+            difficulties.append('beginner')
+        if self.basic.isChecked():
+            difficulties.append('easy')
+        if self.difficult.isChecked():
+            difficulties.append('medium')
+        if self.expert.isChecked():
+            difficulties.append('hard')
+        if self.challenge.isChecked():
+            difficulties.append('challenge')
+        if self.edit.isChecked():
+            difficulties.append('edit')
+
+        style = self.style.currentText().lower()
+        for pack in packs:
+            for song in pack['songs']:
+                    for difficulty in difficulties:
+                        if (song['difficulty_scale'] == 'itg' or pack['difficulty_scale'] == 'itg') and self.itgUse.isChecked():
+                            if difficulty in song[style].keys() and int(song[style][difficulty]) in range(self.itgMin.value(),self.itgMax.value()+1):
+                                song['draw_diff']=difficulty
+                                song['folder']=pack['folder']
+                                song['folder_diff']=pack['difficulty_scale']
+                                matchingSongs.append(song)
+                        if (song['difficulty_scale'] == 'ddr' or pack['difficulty_scale'] == 'ddr')and self.ddrUse.isChecked():
+                            if difficulty in song[style].keys() and int(song[style][difficulty]) in range(self.ddrMin.value(),self.ddrMax.value()+1):
+                                song['draw_diff']=difficulty
+                                song['folder']=pack['folder']
+                                song['folder_diff']=pack['difficulty_scale']
+                                matchingSongs.append(song)
+                        if (song['difficulty_scale'] == 'ddrx' or pack['difficulty_scale'] == 'ddrx') and self.ddrXUse.isChecked():
+                            if difficulty in song[style].keys() and int(song[style][difficulty]) in range(self.ddrXMin.value(),self.ddrXMax.value()+1):
+                                song['draw_diff']=difficulty
+                                song['folder']=pack['folder']
+                                song['folder_diff']=pack['difficulty_scale']
+                                matchingSongs.append(song)
+        numSongs =len(matchingSongs)
+        row = QHBoxLayout()
+        if numSongs>0:
+            for i in range(self.numDraw.value()):
+                draw = random.randint(0,numSongs-1)
+                song =matchingSongs[draw]
+                card  = Card()
+                #button.setMinimumSize(QSize(0,150))
+                #button.
+                if song['draw_diff'] == 'beginner':
+                    color='lightblue'
+                if song['draw_diff'] == 'easy':
+                    color='yellow'
+                if song['draw_diff'] == 'medium':
+                    color='red'
+                if song['draw_diff'] == 'hard':
+                    color='green'
+                if song['draw_diff'] == 'challenge':
+                    color='purple'
+                if song['draw_diff'] == 'edit':
+                    color='gray'
+                card.setColor (color)
+                card.setBackground(song['banner'])
+                card.setTitle(song['title'])
+                if 'subtitle' in song.keys():
+                    card.setSubTitle(song['subtitle'])
+                if 'titletranslit' in song.keys():
+                    card.setTitleTranslit(song['titletranslit'])
+                if 'artist' in song.keys():
+                    card.setArtist(song['artist'])
+                card.setFolder(song['folder'])
+                row.addWidget(card)
+            self.drawnCards.addRow(row)
+        else:
+            Print('No Songs Matched')
+
+    def drawCards(self):
+        self.drawCardsNaive()
 
 class SongInfoPanel(QWidget):
     def __init__(self, parent):
@@ -848,6 +1126,9 @@ class ScraperMainPanel(QWidget):
             json.dump(assetPacks,jsonOutFile, sort_keys=True, indent=2)
         parent.hidePB()
 
+    def getPacks(self):
+        return self.packs
+
 class ScraperMainWindow(QMainWindow):
 
     def __init__(self):
@@ -860,7 +1141,11 @@ class ScraperMainWindow(QMainWindow):
         self.resize(1024,768)
         QApplication.setStyle(QStyleFactory.create('Fusion'))
         self.setWindowIcon(QIcon(GRAPHICS_DIR+'sm.png'))
-        self.mainPanel = ScraperMainPanel('info.json')
+        self.mainPanel = QTabWidget()
+        self.scraper = ScraperMainPanel('info.json')
+        self.cardDraw = CardDrawPanel(self)
+        self.mainPanel.addTab(self.scraper,'Scraper')
+        self.mainPanel.addTab(self.cardDraw, 'Card Draw')
         self.progressBar = QProgressBar()
         self.progressBar.hide()
         self.status.addWidget(self.progressBar)
@@ -911,25 +1196,28 @@ class ScraperMainWindow(QMainWindow):
 
         self.show()
 
+    def getPacks(self):
+        return self.scraper.getPacks()
+
     def exportImages(self, event):
         fileName = QFileDialog.getExistingDirectory(self, 'Select Assests folder','.')
         if fileName!='':
-            self.mainPanel.exportImages(self, fileName)
+            self.scraper.exportImages(self, fileName)
 
 
     def newJson(self, event):
         fileName = QFileDialog.getExistingDirectory(self,'Select Songs Root Folder','c:/games/Stepmania 5.1/Songs')
-        self.mainPanel.buildJson(self, fileName)
+        self.scraper.buildJson(self, fileName)
 
 
     def openJson(self, event):
-        self.mainPanel.loadJson()
+        self.scraper.loadJson()
 
     def saveAsJson(self, event):
-        self.mainPanel.saveAsJson()
+        self.scraper.saveAsJson()
 
     def saveJson(self, event):
-        self.mainPanel.saveJson()
+        self.scraper.saveJson()
         self.status.showMessage('Saved')
 
     def quitApp(self):
