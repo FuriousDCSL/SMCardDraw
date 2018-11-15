@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStyleFactory,\
     QGraphicsScene, QGraphicsView, QErrorMessage, QGraphicsScale, \
     QGraphicsItem, QListWidget, QCheckBox, QRadioButton, QFrame, \
     QListWidgetItem, QMessageBox, QProgressBar, QScrollArea, QGroupBox, \
-    QSpacerItem
+    QSpacerItem, QGraphicsDropShadowEffect, QGraphicsOpacityEffect
 from PyQt5.QtGui import QIcon, QPixmap, QPen, QBrush, QTransform, QColor, \
     QPainter, QPalette, QFont
 from PyQt5.QtCore import QSize,Qt, QRect, QPointF, QTimer, pyqtSignal, pyqtSlot
@@ -81,10 +81,12 @@ class PacksPanel(QWidget):
         topLayout.addWidget(self.list)
 
     def currentItemChanged(self, item):
-        self.parent.packSelect(item.text())
+        if item != None:
+            self.parent.packSelect(item.text())
 
 
     def update(self, packs):
+        self.list.clear()
         for pack in packs:
             self.list.addItem(pack['name'])
         self.packUpdate(packs)
@@ -471,54 +473,159 @@ class Card(QWidget):
     def __init__(self):
         super().__init__()
         self.mouseReleaseEvent = self.clicked
+
+
         self.initUI()
 
     def initUI(self):
         self.layout =QGridLayout()
         self.layout.addItem(QSpacerItem(10,10),0,0)
         self.layout.addItem(QSpacerItem(10,10),5,5)
+        self.formLayout = QFormLayout()
+        self.layout.addLayout(self.formLayout,1,1,4,4,Qt.AlignCenter)
+        self.veto = QFrame()
+        self.veto.setFrameShape(QFrame.Box)
+        effect = QGraphicsOpacityEffect()
+        effect.setOpacity(.5)
+        self.veto.setGraphicsEffect(effect)
+        self.veto.setStyleSheet('border: 5px ; border-radius: 20px; background-color: gray')
+        self.vetoed = False
         self.setLayout(self.layout)
 
     def setColor(self, color):
         self.color = QFrame()
         self.color.setFrameShape(QFrame.Box)
+        self.color.setStyleSheet('border: 5px ; border-radius: 20px; background-color: '+color)
         self.layout.addWidget(self.color,0,0,-1,-1)
-        self.color.setStyleSheet('border: 5px groove ; border-radius: 20px; background-color: '+color)
+
+    def setVeto(self, vetoed):
+        self.vetoed = vetoed
+        if vetoed:
+            self.layout.addWidget(self.veto,0,0,-1,-1)
+            self.veto.show()
+        else:
+            self.layout.removeWidget(self.veto)
+            self.veto.hide()
 
     def clicked(self,event):
-        print('clicked',self.title)
+        if self.vetoed:
+            self.setVeto(False)
+        else:
+            self.setVeto(True)
 
     def setBackground(self, imageName):
         label = QLabel()
         label.setPixmap(QPixmap(imageName).scaledToWidth(150))
-        self.layout.addWidget(label,1,1,3,3,Qt.AlignCenter)
+        effect = QGraphicsOpacityEffect()
+        effect.setOpacity(.75)
+        label.setGraphicsEffect(effect)
+        self.layout.addWidget(label,1,1,4,4,Qt.AlignCenter)
 
     def setTitle(self,title):
         self.title = title
         label = QLabel(title)
+        effect = QGraphicsDropShadowEffect()
+        effect.setBlurRadius(4)
+        effect.setColor(Qt.black)
+        effect.setXOffset(1)
+        effect.setYOffset(1)
+        label.setGraphicsEffect(effect)
         label.setStyleSheet('color: white')
         label.setWordWrap(True)
-        label.setFont(QFont('SanSerif',12,QFont.Bold))
-        self.layout.addWidget(label,0,1,3,1)
+        label.setFont(QFont('SanSerif',16,QFont.Bold))
+        self.formLayout.addRow(label)
 
     def setSubTitle(self, subTitle):
-        label = QLabel(subTitle)
-        label.setStyleSheet('color: white')
-        self.layout.addWidget(label,1,1,3,1)
+        if subTitle != '':
+            label = QLabel(subTitle)
+            effect = QGraphicsDropShadowEffect()
+            effect.setBlurRadius(4)
+            effect.setColor(Qt.black)
+            effect.setXOffset(1)
+            effect.setYOffset(1)
+            label.setGraphicsEffect(effect)
+            label.setStyleSheet('color: white')
+            label.setWordWrap(True)
+            label.setFont(QFont('SanSerif',12))
+            self.formLayout.addRow(label)
 
     def setTitleTranslit(self,titletranslit):
-        pass
+        if titletranslit != '':
+            label = QLabel(titletranslit)
+            effect = QGraphicsDropShadowEffect()
+            effect.setBlurRadius(4)
+            effect.setColor(Qt.black)
+            effect.setXOffset(1)
+            effect.setYOffset(1)
+            label.setGraphicsEffect(effect)
+            label.setStyleSheet('color: white')
+            label.setWordWrap(True)
+            label.setFont(QFont('SanSerif',12))
+            self.formLayout.addRow(label)
 
     def setArtist(self,artist):
         label = QLabel(artist)
+        effect = QGraphicsDropShadowEffect()
+        effect.setBlurRadius(4)
+        effect.setColor(Qt.black)
+        effect.setXOffset(1)
+        effect.setYOffset(1)
+        label.setGraphicsEffect(effect)
         label.setStyleSheet('color: white')
-        self.layout.addWidget(label,2,1,3,1)
+        label.setFont(QFont('SanSerif',14, QFont.Bold))
+        label.setWordWrap(True)
+        self.formLayout.addRow(label)
+
+    def setStyleMeter(self,style,scale, meter):
+        label1 = QLabel(style)
+        effect1 = QGraphicsDropShadowEffect()
+        effect1.setBlurRadius(4)
+        effect1.setColor(Qt.black)
+        effect1.setXOffset(1)
+        effect1.setYOffset(1)
+        label1.setGraphicsEffect(effect1)
+        label1.setStyleSheet('color: white')
+        label1.setFont(QFont('SanSerif',12, QFont.Bold))
+        label1.setWordWrap(True)
+        label2 = QLabel(meter)
+        effect2 = QGraphicsDropShadowEffect()
+        effect2.setBlurRadius(4)
+        effect2.setColor(Qt.black)
+        effect2.setXOffset(2)
+        effect2.setYOffset(2)
+        label2.setGraphicsEffect(effect2)
+        label2.setStyleSheet('color: white')
+        label2.setFont(QFont('SanSerif',12, QFont.Bold))
+        label2.setWordWrap(True)
+        label3 = QLabel(scale)
+        effect3 = QGraphicsDropShadowEffect()
+        effect3.setBlurRadius(4)
+        effect3.setColor(Qt.black)
+        effect3.setXOffset(1)
+        effect3.setYOffset(1)
+        label3.setGraphicsEffect(effect3)
+        label3.setStyleSheet('color: white')
+        label3.setFont(QFont('SanSerif',12, QFont.Bold))
+        label3.setWordWrap(True)
+        rowLayout = QHBoxLayout()
+        rowLayout.addWidget(label1)
+        rowLayout.addWidget(label3)
+        rowLayout.addWidget(label2)
+        self.formLayout.addRow(rowLayout)
+
 
     def setFolder(self,folder):
-        label = QLabel(folder)
+        label = QLabel(os.path.split(folder)[1])
         label.setStyleSheet('color: white')
         label.setWordWrap(True)
-        self.layout.addWidget(label,3,1,3,1)
+        effect = QGraphicsDropShadowEffect()
+        effect.setBlurRadius(4)
+        effect.setColor(Qt.black)
+        effect.setXOffset(1)
+        effect.setYOffset(1)
+        label.setGraphicsEffect(effect)
+        label.setFont(QFont('SanSerif',12, QFont.Bold))
+        self.formLayout.addRow(label)
 
 # card.setColor (color)
 # card.setBackground(song['banner'])
@@ -661,6 +768,10 @@ class CardDrawPanel(QWidget):
         style = self.style.currentText().lower()
         for pack in packs:
             for song in pack['songs']:
+                #print('Pack: ', pack['name'],' excluded: ', pack['excluded'], 'song: ', song['title'], 'excluded: ', song['excluded'])
+                if song['excluded'] == 'true' or pack['excluded'] == 'true':
+                    pass
+                else:
                     for difficulty in difficulties:
                         if (song['difficulty_scale'] == 'itg' or pack['difficulty_scale'] == 'itg') and self.itgUse.isChecked():
                             if difficulty in song[style].keys() and int(song[style][difficulty]) in range(self.itgMin.value(),self.itgMax.value()+1):
@@ -694,7 +805,7 @@ class CardDrawPanel(QWidget):
                 if song['draw_diff'] == 'easy':
                     color='yellow'
                 if song['draw_diff'] == 'medium':
-                    color='red'
+                    color='darkred'
                 if song['draw_diff'] == 'hard':
                     color='green'
                 if song['draw_diff'] == 'challenge':
@@ -710,11 +821,13 @@ class CardDrawPanel(QWidget):
                     card.setTitleTranslit(song['titletranslit'])
                 if 'artist' in song.keys():
                     card.setArtist(song['artist'])
+                card.setStyleMeter(self.style.currentText(),song['folder_diff'], song[style][song['draw_diff']])
                 card.setFolder(song['folder'])
+                #card.setVeto(True)
                 row.addWidget(card)
             self.drawnCards.addRow(row)
         else:
-            Print('No Songs Matched')
+            print('No Songs Matched')
 
     def drawCards(self):
         self.drawCardsNaive()
@@ -1044,6 +1157,7 @@ class ScraperMainPanel(QWidget):
         parent.hidePB()
 
     def loadJson(self):
+        self.packs = []
         fileName = QFileDialog.getOpenFileName(self, 'Select JSON file', '', 'JSON Files (*.json)')
         if fileName[0] != '':
             with io.open(fileName[0], encoding='utf-8') as jsonFile:
@@ -1158,7 +1272,7 @@ class ScraperMainWindow(QMainWindow):
         openAct = QAction('&Open', self)
         openAct.setShortcut('Ctrl+O')
         openAct.triggered.connect(self.openJson)
-        exportAct = QAction('Export', self)
+        exportAct = QAction('Export for WebApp', self)
         exportAct.triggered.connect(self.exportImages)
         saveAct = QAction('&Save',self)
         saveAct.setShortcut('Ctrl+S')
