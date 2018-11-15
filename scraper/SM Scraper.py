@@ -768,7 +768,6 @@ class CardDrawPanel(QWidget):
         style = self.style.currentText().lower()
         for pack in packs:
             for song in pack['songs']:
-                #print('Pack: ', pack['name'],' excluded: ', pack['excluded'], 'song: ', song['title'], 'excluded: ', song['excluded'])
                 if song['excluded'] == 'true' or pack['excluded'] == 'true':
                     pass
                 else:
@@ -800,8 +799,7 @@ class CardDrawPanel(QWidget):
                 draw = 0
             else:
                 continue
-            
-            print(len(matchingSongs)," ",draw)
+
             song =matchingSongs[draw]
             del matchingSongs[draw]
             numSongs = len(matchingSongs)
