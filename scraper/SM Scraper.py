@@ -793,41 +793,47 @@ class CardDrawPanel(QWidget):
                                 matchingSongs.append(song)
         numSongs =len(matchingSongs)
         row = QHBoxLayout()
-        if numSongs>0:
-            for i in range(self.numDraw.value()):
+        for i in range(self.numDraw.value()):
+            if numSongs >1:
                 draw = random.randint(0,numSongs-1)
-                song =matchingSongs[draw]
-                card  = Card()
-                #button.setMinimumSize(QSize(0,150))
-                #button.
-                if song['draw_diff'] == 'beginner':
-                    color='lightblue'
-                if song['draw_diff'] == 'easy':
-                    color='yellow'
-                if song['draw_diff'] == 'medium':
-                    color='darkred'
-                if song['draw_diff'] == 'hard':
-                    color='green'
-                if song['draw_diff'] == 'challenge':
-                    color='purple'
-                if song['draw_diff'] == 'edit':
-                    color='gray'
-                card.setColor (color)
-                card.setBackground(song['banner'])
-                card.setTitle(song['title'])
-                if 'subtitle' in song.keys():
-                    card.setSubTitle(song['subtitle'])
-                if 'titletranslit' in song.keys():
-                    card.setTitleTranslit(song['titletranslit'])
-                if 'artist' in song.keys():
-                    card.setArtist(song['artist'])
-                card.setStyleMeter(self.style.currentText(),song['folder_diff'], song[style][song['draw_diff']])
-                card.setFolder(song['folder'])
-                #card.setVeto(True)
-                row.addWidget(card)
-            self.drawnCards.addRow(row)
-        else:
-            print('No Songs Matched')
+            elif numSongs == 1:
+                draw = 0
+            else:
+                continue
+            
+            print(len(matchingSongs)," ",draw)
+            song =matchingSongs[draw]
+            del matchingSongs[draw]
+            numSongs = len(matchingSongs)
+            card  = Card()
+            #button.setMinimumSize(QSize(0,150))
+            #button.
+            if song['draw_diff'] == 'beginner':
+                color='lightblue'
+            if song['draw_diff'] == 'easy':
+                color='yellow'
+            if song['draw_diff'] == 'medium':
+                color='darkred'
+            if song['draw_diff'] == 'hard':
+                color='green'
+            if song['draw_diff'] == 'challenge':
+                color='purple'
+            if song['draw_diff'] == 'edit':
+                color='gray'
+            card.setColor (color)
+            card.setBackground(song['banner'])
+            card.setTitle(song['title'])
+            if 'subtitle' in song.keys():
+                card.setSubTitle(song['subtitle'])
+            if 'titletranslit' in song.keys():
+                card.setTitleTranslit(song['titletranslit'])
+            if 'artist' in song.keys():
+                card.setArtist(song['artist'])
+            card.setStyleMeter(self.style.currentText(),song['folder_diff'], song[style][song['draw_diff']])
+            card.setFolder(song['folder'])
+            #card.setVeto(True)
+            row.addWidget(card)
+        self.drawnCards.addRow(row)
 
     def drawCards(self):
         self.drawCardsNaive()
